@@ -1,0 +1,111 @@
+version: 2
+defaults: &defaults
+  docker:
+    - image: google/cloud-sdk@sha256:126a49cfa2aa6e20d561fa14999bf657bc341efeba04939bd2f612bf843d12a6
+jobs:
+  build:
+    <<: *defaults
+    steps:
+      - checkout
+      - setup_remote_docker:
+          docker_layer_caching: true
+      - run:
+          name: Generate full image name for new docker image
+          command: |
+            set -x
+            if [ "${CIRCLE_BRANCH}" == "master" ]
+            then
+              DOCKER_IMAGE_TAG=v${CIRCLE_BUILD_NUM}
+              echo "$DOCKER_IMAGE_NAME:$DOCKER_IMAGE_TAG" > full_docker_image_name
+            else
+              DOCKER_IMAGE_TAG=${CIRCLE_BRANCH}
+              echo "hello-app:$DOCKER_IMAGE_TAG" > full_docker_image_name
+            fi
+      - run:
+          name: Build image
+          command: |
+            FULL_DOCKER_IMAGE_NAME=$(cat full_docker_image_name)
+            docker build -t $FULL_DOCKER_IMAGE_NAME -f hello-app/Dockerfile hello-app/
+      - run:
+          name: Push image
+          command: |
+            if [ "${CIRCLE_BRANCH}" == "master" ]
+            then
+              FULL_DOCKER_IMAGE_NAME=$(cat full_docker_image_name)
+              echo $GCLOUD_SERVICE_KEY | base64 --decode --ignore-garbage > gcloud-service-key.json
+              gcloud auth activate-service-account --key-file gcloud-service-key.json
+              gcloud --quiet auth configure-docker
+              docker push $FULL_DOCKER_IMAGE_NAME
+            fi
+      - run:
+          name: Test local image
+          command: |
+            set -x
+            FULL_DOCKER_IMAGE_NAME=$(cat full_docker_image_name)
+            docker run -d --rm -p 8080:8080 --name hello-app $FULL_DOCKER_IMAGE_NAME
+            docker run --network container:hello-app appropriate/curl --retry 10 --retry-connrefused http://localhost:8080
+            if [ "${CIRCLE_BRANCH}" != "master" ]
+            then
+              circleci step halt
+            fi
+      - persist_to_workspace:
+          root: .
+          paths:
+            - full_docker_image_name
+            - gcloud-service-key.json
+  deploy:
+    <<: *defaults
+    steps:
+      - checkout
+      - setup_remote_docker:
+          docker_layer_caching: true
+      - attach_workspace:
+          at: workspace
+      - run:
+          name: Install utils
+          command: |
+            apt-get update
+            apt-get install jq
+      - run:
+          name: Deploy
+          command: |
+            set -x
+            gcloud auth activate-service-account --key-file workspace/gcloud-service-key.json
+            gcloud --quiet config set project $GOOGLE_PROJECT_ID
+            gcloud --quiet config set compute/zone $GOOGLE_COMPUTE_ZONE
+            EXISTING_CLUSTER=$(gcloud container clusters list --format="value(name)" --filter="name=$GOOGLE_CLUSTER_NAME")
+            if [ "${EXISTING_CLUSTER}" != $GOOGLE_CLUSTER_NAME ]
+            then
+              # Create cluster if not exists
+              gcloud --quiet container clusters create $GOOGLE_CLUSTER_NAME --num-nodes=3
+              # Check
+              gcloud compute instances list
+            else
+              gcloud --quiet container clusters get-credentials $GOOGLE_CLUSTER_NAME
+            fi
+            FULL_DOCKER_IMAGE_NAME=$(cat workspace/full_docker_image_name)
+            # Replace DOCKER_IMAGE_NAME placeholder in manifest with actual image name
+            KUBE_CONFIG=$(cat hello-app/manifests/helloweb-all-in-one.yaml.template | sed "s|DOCKER_IMAGE_NAME|$FULL_DOCKER_IMAGE_NAME|g")
+            echo "$KUBE_CONFIG" | kubectl apply -f -
+            # Wait for deployment to finish
+            kubectl rollout status deployment/helloweb
+            kubectl get pods
+      - run:
+          name: Test deployed application
+          command: |
+            # Wait for external ip to be assigned
+            sleep 60
+            kubectl get service helloweb
+            EXTERNAL_IP=$(kubectl get service helloweb -o json | jq -r ".status.loadBalancer.ingress[0].ip")
+            curl "http://$EXTERNAL_IP"
+workflows:
+  version: 2
+  build-deploy:
+    jobs:
+      - build
+      - deploy:
+          requires:
+            - build
+          filters:
+            branches:
+              only: master
