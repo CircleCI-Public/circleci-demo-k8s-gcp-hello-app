@@ -7,8 +7,7 @@ jobs:
     <<: *defaults
     steps:
       - checkout
-      - setup_remote_docker:
-          docker_layer_caching: true
+      - setup_remote_docker
       - run:
           name: Generate full image name for new docker image
           command: |
@@ -57,8 +56,7 @@ jobs:
     <<: *defaults
     steps:
       - checkout
-      - setup_remote_docker:
-          docker_layer_caching: true
+      - setup_remote_docker
       - attach_workspace:
           at: workspace
       - run:
@@ -76,10 +74,8 @@ jobs:
             EXISTING_CLUSTER=$(gcloud container clusters list --format="value(name)" --filter="name=$GOOGLE_CLUSTER_NAME")
             if [ "${EXISTING_CLUSTER}" != $GOOGLE_CLUSTER_NAME ]
             then
-              # Create cluster if not exists
+              # Create cluster if it doesn't already exist
               gcloud --quiet container clusters create $GOOGLE_CLUSTER_NAME --num-nodes=3
-              # Check
-              gcloud compute instances list
             else
               gcloud --quiet container clusters get-credentials $GOOGLE_CLUSTER_NAME
             fi
