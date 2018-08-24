@@ -35,6 +35,8 @@ jobs:
               gcloud auth activate-service-account --key-file gcloud-service-key.json
               gcloud --quiet auth configure-docker
               docker push $FULL_DOCKER_IMAGE_NAME
+            else
+              echo "Not master branch; skipping image push.."
             fi
       - run:
           name: Test local image
