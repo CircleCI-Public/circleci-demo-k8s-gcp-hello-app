@@ -98,10 +98,13 @@ jobs:
             EXTERNAL_IP=$(kubectl get service helloweb -o json | jq -r ".status.loadBalancer.ingress[0].ip")
             curl "http://$EXTERNAL_IP"
       - run:
-          name: Tear down application and resources (since this is a demo)
+          name: Tear down application and resources if configured (since this is a demo)
           command: |
-            kubectl delete service helloweb
-            gcloud --quiet container clusters delete $GOOGLE_CLUSTER_NAME
+            if [ "true" == "${DELETE_CLUSTER_AT_END_OF_TEST}"]
+            then
+              kubectl delete service helloweb
+              gcloud --quiet container clusters delete $GOOGLE_CLUSTER_NAME
+            fi
 workflows:
   version: 2
   build-deploy:
