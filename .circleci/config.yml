@@ -53,7 +53,7 @@ jobs:
           root: .
           paths:
             - full_docker_image_name
-            - gcloud-service-key.json
+
   deploy:
     <<: *defaults
     steps:
@@ -69,8 +69,9 @@ jobs:
       - run:
           name: Deploy
           command: |
+            echo $GCLOUD_SERVICE_KEY | base64 --decode --ignore-garbage > gcloud-service-key.json
             set -x
-            gcloud auth activate-service-account --key-file workspace/gcloud-service-key.json
+            gcloud auth activate-service-account --key-file gcloud-service-key.json
             gcloud --quiet config set project $GOOGLE_PROJECT_ID
             gcloud --quiet config set compute/zone $GOOGLE_COMPUTE_ZONE
             EXISTING_CLUSTER=$(gcloud container clusters list --format="value(name)" --filter="name=$GOOGLE_CLUSTER_NAME")
