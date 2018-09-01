@@ -100,7 +100,7 @@ jobs:
       - run:
           name: Tear down application and resources if configured (since this is a demo)
           command: |
-            if [ "true" == "${DELETE_CLUSTER_AT_END_OF_TEST}"]
+            if [ "${DELETE_CLUSTER_AT_END_OF_TEST}" == "true" ]
             then
               kubectl delete service helloweb
               gcloud --quiet container clusters delete $GOOGLE_CLUSTER_NAME
