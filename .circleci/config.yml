@@ -77,7 +77,7 @@ jobs:
             if [ "${EXISTING_CLUSTER}" != $GOOGLE_CLUSTER_NAME ]
             then
               # Create cluster if it doesn't already exist
-              gcloud --quiet container clusters create $GOOGLE_CLUSTER_NAME --num-nodes=3
+              gcloud --quiet container clusters create $GOOGLE_CLUSTER_NAME --num-nodes=1
             else
               gcloud --quiet container clusters get-credentials $GOOGLE_CLUSTER_NAME
             fi
@@ -96,6 +96,11 @@ jobs:
             kubectl get service helloweb
             EXTERNAL_IP=$(kubectl get service helloweb -o json | jq -r ".status.loadBalancer.ingress[0].ip")
             curl "http://$EXTERNAL_IP"
+      - run:
+          name: Tear down application and resources (since this is a demo)
+          command: |
+            kubectl delete service helloweb
+            gcloud --quiet container clusters delete $GOOGLE_CLUSTER_NAME
 workflows:
   version: 2
   build-deploy:
