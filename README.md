@@ -1,14 +1,14 @@
-circleci-k8s-gcp-hello-app
-==========================
+circleci-demo-k8s-gcp-hello-app
+===============================
 
-[![CircleCI](https://circleci.com/gh/CircleCI-Public/circleci-k8s-gcp-hello-app.svg?style=svg)](https://circleci.com/gh/CircleCI-Public/circleci-k8s-gcp-hello-app)
+[![CircleCI](https://circleci.com/gh/CircleCI-Public/circleci-demo-k8s-gcp-hello-app.svg?style=svg)](https://circleci.com/gh/CircleCI-Public/circleci-demo-k8s-gcp-hello-app)
 
 This project demonstrates continuous delivery with [CircleCI](https://circleci.com) and [Google Kubernetes Engine](https://cloud.google.com/kubernetes-engine/) using [Docker](https://www.docker.com/) and [Kubernetes](https://github.com/GoogleCloudPlatform/kubernetes).
 
 This project is based on the demo tutorial here:
 https://cloud.google.com/kubernetes-engine/docs/tutorials/hello-app
 
-The code for the hello-app application was extracted from this repository: https://github.com/GoogleCloudPlatform/kubernetes-engine-samples/tree/master/hello-app
+The code for the hello-app application was based on this repository: https://github.com/GoogleCloudPlatform/kubernetes-engine-samples/tree/master/hello-app
 
 
 ## Prerequisites
